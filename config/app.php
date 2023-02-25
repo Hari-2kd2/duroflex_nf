@@ -180,7 +180,7 @@ return [
         Barryvdh\DomPDF\ServiceProvider::class,
         Barryvdh\Cors\ServiceProvider::class,
         Maatwebsite\Excel\ExcelServiceProvider::class,
-        Barryvdh\Debugbar\ServiceProvider::class,
+        // Barryvdh\Debugbar\ServiceProvider::class,
         Tymon\JWTAuth\Providers\LaravelServiceProvider::class,
         Bodunde\GoogleGeocoder\GeocoderServiceProvider::class,
 
