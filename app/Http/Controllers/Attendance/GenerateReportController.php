@@ -559,10 +559,11 @@ class GenerateReportController extends Controller
                     $tempArray['attendance_status'] = AttendanceStatus::$LESSHOURS;
                 }
 
-                $shiftEndTime = new DateTime($tempArray['end_time']);
-                $employeeOutTime = new DateTime(date('H:i:s', strtotime($data_format['out_time'])));
+                $outTime = new DateTime(date('H:i:s', strtotime($data_format['out_time'])));
+                $shiftEndTime = new DateTime(date('H:i:s', strtotime($tempArray['end_time'])));
+                $employeeOutTime = new DateTime($data_format['out_time']);
 
-                if ($shiftEndTime > $employeeOutTime) {
+                if ($shiftEndTime < $employeeOutTime && $outTime > $shiftEndTime) {
 
                     $over_time = $employeeOutTime->diff($shiftEndTime);
 
@@ -576,7 +577,6 @@ class GenerateReportController extends Controller
                 } else {
                     $tempArray['over_time'] = null;
                 }
-
             }
 
             if ($tempArray['shift_name'] == null) {
