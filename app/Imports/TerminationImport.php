@@ -20,7 +20,7 @@ use Maatwebsite\Excel\Concerns\Importable;
 use Maatwebsite\Excel\Concerns\WithStartRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
 
-class TerminationImport  implements ToModel, WithValidation, WithStartRow
+class TerminationImport implements ToModel, WithValidation, WithStartRow
 {
     use Importable;
 
@@ -44,7 +44,7 @@ class TerminationImport  implements ToModel, WithValidation, WithStartRow
             '1.required' => 'Employee ID field is required',
             '2.required' => 'Subject field is required',
             '1.exists' => 'Employee ID is not exists',
-            '1.unique' => 'Provide non terminated employee id',
+            '1.unique' => 'Provide non terminated Employee Id, this data already present in termination list!',
             '3.required' => 'Description field is required',
             '4.required' => 'Termination Date field is required',
             '5.required' => 'Termination Type field is required',
@@ -67,7 +67,7 @@ class TerminationImport  implements ToModel, WithValidation, WithStartRow
 
             if ($row[4])
                 try {
-                    $date =  \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($row[4])->format('Y-m-d');
+                    $date = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($row[4])->format('Y-m-d');
                 } catch (\Throwable $th) {
                     $date = date('Y-m-d', strtotime($row[4]));
                 }
@@ -79,11 +79,15 @@ class TerminationImport  implements ToModel, WithValidation, WithStartRow
                 'terminate_by' => auth()->user()->user_id,
                 'termination_type' => $row[5],
                 'subject' => $row[2],
-                'notice_date' =>  date('Y-m-d'),
+                'notice_date' => date('Y-m-d'),
                 'termination_date' => $date,
                 'description' => $row[3],
                 'status' => UserStatus::$NOTICE,
             ]);
+        } else {
+            $employee = null;
+            $exist = null;
+            $date = null;
         }
 
         DB::commit();

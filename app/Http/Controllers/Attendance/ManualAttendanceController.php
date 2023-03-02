@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Lib\Enumerations\UserStatus;
 use App\Model\Employee;
 use App\Model\EmployeeAttendance;
+use App\Model\EmployeeInOutData;
 use App\Model\IpSetting;
 use App\Model\ManualAttendance;
 use App\Model\WhiteListedIp;
 use App\Repositories\AttendanceRepository;
+use App\Repositories\CommonRepository;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,17 +21,46 @@ class ManualAttendanceController extends Controller
 {
     protected $generateReportController;
     protected $attendanceRepository;
+    protected $commonRepository;
 
-    public function __construct(GenerateReportController $generateReportController, AttendanceRepository $attendanceRepository)
+    public function __construct(GenerateReportController $generateReportController, AttendanceRepository $attendanceRepository, CommonRepository $commonRepository)
     {
         $this->generateReportController = $generateReportController;
         $this->attendanceRepository = $attendanceRepository;
+        $this->commonRepository = $commonRepository;
     }
 
     public function manualAttendance(Request $request)
     {
-        $employeeList = Employee::where('status', UserStatus::$ACTIVE)->orderBy('finger_id', 'ASC')->get();
-        return view('admin.attendance.manualAttendance.index', ['employeeList' => $employeeList]);
+
+        $data = dateConvertFormtoDB($request->get('date'));
+        $branch = $request->get('branch_id');
+        $branchList = [];
+        $results = [];
+
+        if (session('logged_session_data.role_id') == 1 || session('logged_session_data.role_id') == 2) {
+            $branchList = $this->commonRepository->branchList();
+        }
+
+        if ($_POST) {
+            $results = EmployeeInOutData::filter(UserStatus::$ACTIVE)->branch($branch)->where('date', $data)->orderByDesc('date')->get();
+        }
+        return view('admin.attendance.manualAttendance.index', compact('branchList', 'results'));
+    }
+
+    public function individualReport(Request $request)
+    {
+        try {
+            info($request->all());
+            $recompute = false;
+            $manual = true;
+            $results = $this->generateReportController->generateManualAttendanceReport($request->finger_print_id, date('Y-m-d', strtotime($request->in_time)), date('Y-m-d H:i:s', strtotime($request->in_time)), date('Y-m-d H:i:s', strtotime($request->out_time)), $manual, $recompute);
+            echo $results ? 'success' : 'error';
+        } catch (\Throwable $th) {
+            //throw $th;
+            info($th);
+            echo $th->getMessage();
+        }
     }
 
     public function filterData(Request $request)
@@ -59,7 +90,7 @@ class ManualAttendanceController extends Controller
             ->where('employee.status', 1)
             ->get();
 
-        return view('admin.attendance.manualAttendance.index', ['employeeList' => $employeeList, 'attendanceData' => $attendanceData]);
+        return view('admin.attendance.manualAttendance.index', ['employeeList' => $employeeList, 'attendanceData' => $attendanceData, 'results' => []]);
     }
 
     public function store(Request $request)
@@ -81,7 +112,7 @@ class ManualAttendanceController extends Controller
                     ->whereRaw('manual_attendance.datetime >= "' . $start . '" AND manual_attendance.datetime <=  "' . $end . '"')
                     ->get()->toJson(), true);
 
-            $delete = DB::table('manual_attendance')->whereIn('primary_id', array_values($result))->delete();
+            DB::table('manual_attendance')->whereIn('primary_id', array_values($result))->delete();
 
             foreach ($request->finger_print_id as $key => $finger_print_id) {
 

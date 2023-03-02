@@ -94,9 +94,8 @@
                                     <input type="file" name="select_file" class="form-control custom-file-upload">
                                 </div>
                                 <div class="form-group col-md-3">
-                                    <input class="form-control monthField"
-                                        style="height: 35px;border-radius: 6px;" required readonly
-                                        placeholder="@lang('common.month')" id="month" name="month"
+                                    <input class="form-control monthField" style="height: 35px;border-radius: 6px;"
+                                        required readonly placeholder="@lang('common.month')" id="month" name="month"
                                         value="@if (isset($month)) {{ $month }}@else {{ date('Y-m') }} @endif">
                                 </div>
                                 <div class="col-md-1 pull-left" style="margin-top: 1px;">
@@ -229,8 +228,8 @@
                                             <td>{{ $value->d_29 ? $shift[$value->d_29] : 'NA' }}</td>
                                             <td>{{ $value->d_30 ? $shift[$value->d_30] : 'NA' }}</td>
                                             <td>{{ $value->d_31 ? $shift[$value->d_31] : 'NA' }}</td>
-                                            <td>{{ App\Model\Employee::where('employee_id', $value->updated_by)->first()->first_name }}
-                                                <br>{{ date('d/m/y h:i A', strtotime($value->updated_at)) }}
+                                            <td>{{ $value->updated_user->first_name . ' ' . $value->updated_user->last_name }}
+                                                @<br>{{ date('d/m/y h:i A', strtotime($value->updated_at)) }}
                                             </td>
 
                                         </tr>

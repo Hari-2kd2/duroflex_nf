@@ -381,17 +381,15 @@
                                 </tbody>
                             </table>
                             @if (count($results) > 0)
-
-                            <div class="text-center col-md-offset-5" style="margin-bottom: 24px;margin-top: 24px">
+				<div class="text-center col-md-offset-5" style="margin-bottom: 24px;margin-top: 24px">
                                 <div style="font-size: 14px;font-weight:bold;"
                                     colspan="{{ count($monthToDate) + 6 }}" class="text-left">
                                     <button style="margin-left: 48px;" type="submit"
                                         class="btn btn-info btn_style"><i class="fa fa-check"></i>
                                         @lang('common.save')</button>
                                 </div>
-                            </div>
-
-			    @endif
+                                </div>
+			   @endif
 
                             {{ Form::close() }}
 

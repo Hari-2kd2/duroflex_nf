@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands\Database;
 
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class Backup extends Command
@@ -38,16 +37,17 @@ class Backup extends Command
      */
     public function handle()
     {
-        $filename = "backup-" . Carbon::now()->format('Y-m-dHmi') . ".sql";
-        $path = "/usr/bin/mysqldump";
-        $username = 'root'; //env('DB_USERNAME')
-        $password = 'Pro@1234'; //env('DB_PASSWORD')
-        $host = '127.0.0.1'; //env('DB_HOST');
-        $database = 'duroflexflavours'; //env('DB_DATABASE')
-        $command = $path . " --user=" . $username . " --password=" . $password . " --host=" . $host . " " . $database . "  > " . storage_path() . "/app/backup/" . $filename;
 
-        echo $command;
+        $filename = strtolower(config('services.mysql.db_database')) . "-backup-" . date('Ymd') . ".sql";
+        $path = ['server' => "/usr/bin/mysqldump", 'local' => "mysqldump"];
 
+        $username = config('services.mysql.db_username'); //env('DB_USERNAME')
+        $password = config('services.mysql.db_password'); //env('DB_PASSWORD')
+        $host = config('services.mysql.db_host'); //env('DB_HOST');
+        $database = config('services.mysql.db_database'); //env('DB_DATABASE')
+
+        $command = $path[config('services.mysql.db_mysql_path')] . " --user=" . $username . " --password=" . $password . " --host=" . $host . " " . $database . "  > " . storage_path() . "/app/backup/" . $filename;
+        
         $returnVar = null;
         $output = null;
 

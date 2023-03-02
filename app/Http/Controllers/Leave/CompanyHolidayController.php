@@ -25,7 +25,7 @@ class CompanyHolidayController extends Controller
 
     public function index()
     {
-        $results = CompanyHoliday::orderByDesc('company_holiday_id')->get();
+        $results = CompanyHoliday::with('employee', 'created_user', 'updated_user')->orderByDesc('company_holiday_id')->get();
 
         return view('admin.leave.companyHoliday.index', ['results' => $results]);
     }
@@ -39,7 +39,7 @@ class CompanyHolidayController extends Controller
 
     public function store(CompanyHolidayRequest $request)
     {
-        
+
         $input = $request->all();
         $input['fdate'] = Carbon::createFromFormat('d/m/Y', $input['fdate'])->format('Y-m-d');
         $input['tdate'] = Carbon::createFromFormat('d/m/Y', $input['tdate'])->format('Y-m-d');
@@ -64,6 +64,8 @@ class CompanyHolidayController extends Controller
     public function edit($id)
     {
         $editModeData = CompanyHoliday::findOrFail($id);
+        $editModeData->fdate = date('d/m/Y', strtotime($editModeData->fdate));
+        $editModeData->tdate = date('d/m/Y', strtotime($editModeData->tdate));
         $employeeList = $this->commonRepository->employeeListWithId();
 
         return view('admin.leave.companyHoliday.form', ['editModeData' => $editModeData, 'employeeList' => $employeeList]);
@@ -74,6 +76,10 @@ class CompanyHolidayController extends Controller
         $holiday = CompanyHoliday::findOrFail($id);
 
         $input = $request->all();
+        $input['fdate'] = Carbon::createFromFormat('d/m/Y', $input['fdate'])->format('Y-m-d');
+        $input['tdate'] = Carbon::createFromFormat('d/m/Y', $input['tdate'])->format('Y-m-d');
+        $input['updated_by'] = auth()->user()->user_id;
+
         try {
             $holiday->update($input);
             $bug = 0;
@@ -120,7 +126,7 @@ class CompanyHolidayController extends Controller
     {
         try {
             $file = $request->file('select_file');
-            Excel::import(new CompanyHolidayImport($request->all()), $file);
+            Excel::import(new CompanyHolidayImport(), $file);
 
             // $path = $request->file('select_file')->getRealPath();
             // $excel =  Excel::import(new EmployeeImport($request->all()), $path);

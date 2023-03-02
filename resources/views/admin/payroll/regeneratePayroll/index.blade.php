@@ -97,9 +97,9 @@
     input:checked+.slider {
         background-color: #3E739B;
         /* animation: color 1s linear infinite;
-        transform-origin: 0px 50px;
-        animation-fill-mode: forwards;
-        animation-direction: alternate; */
+          transform-origin: 0px 50px;
+          animation-fill-mode: forwards;
+          animation-direction: alternate; */
     }
 
     input:focus+.slider {
@@ -111,9 +111,9 @@
         -ms-transform: translateX(20px);
         transform: translateX(20px);
         /* animation: rectangle 1s linear infinite;
-        transform-origin: 0px 50px;
-        animation-fill-mode: forwards;
-        animation-direction: alternate; */
+          transform-origin: 0px 50px;
+          animation-fill-mode: forwards;
+          animation-direction: alternate; */
     }
 
     /* Rounded sliders */

@@ -142,22 +142,17 @@
                                 <tbody>
                                     {!! $sl = null !!}
                                     @foreach ($results as $value)
-                                        @php
-                                            $emp = App\Model\Employee::where('employee_id', $value->employee_id)->first();
-                                        @endphp
                                         <tr
                                             class="{!! $value->company_holiday_id !!} @if (date('Y-m-d') <= $value->date) {{ 'success' }} @endif">
                                             <td style="width: 100px;">{!! ++$sl !!}</td>
-                                            <td>{!! isset($emp->finger_id) ? $emp->finger_id : '' !!}</td>
-                                            <td>{!! isset($emp->first_name) ? $emp->first_name . ' ' . $emp->last_name : ' ' !!}</td>
-                                            <td>{!! isset($emp->branch->branch_name) ? $emp->branch->branch_name : '' !!}</td>
+                                            <td>{!! $value->employee->finger_id !!}</td>
+                                            <td>{!! $value->employee->first_name . ' ' . $value->employee->last_name !!}</td>
+                                            <td>{!! $value->employee->branch->branch_name !!}</td>
                                             <td>{!! dateConvertDBtoForm($value->fdate) !!}</td>
                                             <td>{!! dateConvertDBtoForm($value->tdate) !!}</td>
                                             <td>{!! $value->comment !!}</td>
-                                            <td>{!! isset(App\Model\Employee::where('employee_id', $value->created_by)->first()->first_name)
-                                                ? App\Model\Employee::where('employee_id', $value->created_by)->first()->first_name
-                                                : ' ' !!} @
-                                                {!! date('d/m/Y H:i:s', strtotime($value->updated_at)) !!}</td>
+                                            <td>{!! $value->updated_user->first_name . ' ' . $value->updated_user->last_name !!}
+                                                {!! $value->updated_at !!}</td>
                                             <td style="width: 100px;">
                                                 <a href="{!! route('companyHoliday.edit', $value->company_holiday_id) !!}"
                                                     class="btn btn-success btn-xs btnColor">
