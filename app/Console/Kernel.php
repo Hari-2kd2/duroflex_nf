@@ -17,7 +17,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('generate:attendance')->daily()->at('01:00');
         $schedule->command('generate:attendance')->daily()->at('18:00');
         $schedule->command('mail:daily-attendance')->daily()->at('09:30');
-        $schedule->command('user:termination')->daily()->at('16:10')->withoutOverlapping()->runInBackground()->onOneServer();
+        $schedule->command('user:termination')->daily()->at('22:00')->withoutOverlapping()->runInBackground()->onOneServer();
     }
 
     protected function commands()
