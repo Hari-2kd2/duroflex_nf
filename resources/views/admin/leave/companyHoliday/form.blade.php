@@ -32,9 +32,9 @@
                 <div class="panel-wrapper collapse in" aria-expanded="true">
                     <div class="panel-body">
                         @if (isset($editModeData))
-                            {{ Form::model($editModeData, ['route' => ['companyHoliday.update', $editModeData->holiday_id], 'method' => 'PUT', 'files' => 'true', 'id' => 'companyHolidayForm', 'class' => 'form-horizontal']) }}
+                            {{ Form::model($editModeData, ['route' => ['companyHoliday.update', $editModeData->company_holiday_id], 'method' => 'PUT', 'files' => 'true', 'id' => 'companyHolidayUpdate', 'class' => 'form-horizontal']) }}
                         @else
-                            {{ Form::open(['route' => 'companyHoliday.store', 'enctype' => 'multipart/form-data', 'id' => 'companyHolidayForm', 'class' => 'form-horizontal']) }}
+                            {{ Form::open(['route' => 'companyHoliday.store', 'enctype' => 'multipart/form-data', 'id' => 'companyHolidayStore', 'class' => 'form-horizontal']) }}
                         @endif
 
                         <div class="form-body">

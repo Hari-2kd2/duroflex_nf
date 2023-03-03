@@ -2,15 +2,15 @@
 
 namespace App\Console\Commands\Routine;
 
-use App\User;
-use Exception;
-use Carbon\Carbon;
+use App\Lib\Enumerations\TerminationStatus;
+use App\Lib\Enumerations\UserStatus;
 use App\Model\Employee;
 use App\Model\Termination as MTermination;
-use Illuminate\Console\Command;
-use App\Lib\Enumerations\UserStatus;
 use App\Model\Termination as TModel;
-use App\Lib\Enumerations\TerminationStatus;
+use App\User;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Console\Command;
 
 class Termination extends Command
 {
@@ -46,20 +46,19 @@ class Termination extends Command
      */
     public function handle()
     {
-        $termination = TModel::whereTerminationDate(Carbon::today())->where('status', '!=', UserStatus::$TERMINATE)->get();
-
+        $termination = TModel::where('termination_date', '<=', Carbon::today())->where('status', '!=', UserStatus::$TERMINATE)->get();
+      
         foreach ($termination as $key => $value) {
 
             try {
                 // dd($value);
                 $employee = Employee::where('employee_id', $value->terminate_to)->first();
                 $employee->update(['status' => UserStatus::$TERMINATE]);
-                $user =  User::where('user_id', $employee->user_id)->first();
+                $user = User::where('user_id', $employee->user_id)->first();
                 $user->update(['status' => UserStatus::$TERMINATE]);
                 $termination = MTermination::where('finger_print_id', $employee->finger_id)->update(['status' => TerminationStatus::$APPROVED]);
-                dd($value->finger_print_id, $employee);
             } catch (Exception $e) {
-                dd($e->getMessage());
+                info('Termination Error - ' . $e->getMessage());
             }
         }
     }

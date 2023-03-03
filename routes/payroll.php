@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\Payroll\DailyCtcController;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['middleware' => ['preventbackbutton', 'auth']], function () {
+
+    Route::get('calculate_ctc' , [DailyCtcController::class, 'calculate_ctc']);
 
     Route::group(['prefix' => 'taxSetup'], function () {
         Route::get('/', ['as' => 'taxSetup.index', 'uses' => 'Payroll\TaxSetupController@index']);

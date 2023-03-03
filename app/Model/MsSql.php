@@ -28,7 +28,7 @@ class MsSql extends Model
         'updated_at',
         'created_by',
         'updated_by',
-        'devdt', 'evtlguid', 'local_primary_id'
+        'devdt', 'evtlguid',
     ];
 
     protected $cast = [

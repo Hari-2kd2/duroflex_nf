@@ -38,22 +38,15 @@ class EarnedLeaveReportController extends Controller
 
         $i = 0;
 
-        $data = EarnedLeave::whereRaw("(" . $qry . ")")->orderBy('updated_at', 'DESC');
+        $data = EarnedLeave::whereRaw("(" . $qry . ")")->with('employeeinfo')->orderBy('updated_at', 'DESC');
 
         return DataTables::of($data)
 
             ->addColumn('employee_name', function ($data) {
-                $emp = Employee::find($data->employee_id);
-                if ($emp) {
-                    return $emp->first_name . " " . $emp->last_name;
-                }
+                return $data->employeeinfo->first_name . " " . $data->employeeinfo->last_name;
             })
             ->addColumn('finger_print_id', function ($data) use ($request) {
-                $emp = Employee::find($data->employee_id);
-                if ($emp) {
-                    // return $request->employee_id;
-                    return $emp->finger_id;
-                }
+                return $data->employeeinfo->finger_id;
             })
             ->editColumn('month', function ($data) {
                 $month = "01-" . $data->month . "-" . $data->year;
@@ -82,11 +75,11 @@ class EarnedLeaveReportController extends Controller
             $qry .= " AND year=" . date('Y', strtotime($request->month));
         }
 
-        $earnedLeave = EarnedLeave::whereRaw("(" . $qry . ")")->orderBy('created_at', 'DESC')->get();
+        $earnedLeave = EarnedLeave::whereRaw("(" . $qry . ")")->orderBy('created_at', 'DESC')->with('employeeinfo')->get();
 
         $inc = 1;
 
-        foreach ($earnedLeave as $key => $Data) {
+        foreach ($earnedLeave as $Data) {
 
             $dataset[] = [
                 $inc,

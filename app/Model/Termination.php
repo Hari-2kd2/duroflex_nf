@@ -15,11 +15,11 @@ class Termination extends Model
 
     public function terminateTo()
     {
-        return $this->belongsTo(Employee::class, 'terminate_to');
+        return $this->belongsTo(Employee::class, 'terminate_to')->without('branch', 'department', 'designation', 'costcenter', 'subdepartment');
     }
 
     public function terminateBy()
     {
-        return $this->belongsTo(Employee::class, 'terminate_by');
+        return $this->belongsTo(Employee::class, 'terminate_by')->without('branch', 'department', 'designation', 'costcenter', 'subdepartment');
     }
 }

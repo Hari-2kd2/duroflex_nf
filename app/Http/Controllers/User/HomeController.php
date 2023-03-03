@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Lib\Enumerations\UserStatus;
 use App\Model\Branch;
 use App\Model\CostCenter;
+use App\Model\DailyCostToCompany;
 use App\Model\Department;
 use App\Model\Designation;
 use App\Model\Employee;
@@ -49,7 +50,8 @@ class HomeController extends Controller
         AttendanceRepository $attendanceRepository,
         Warning $warning,
         Termination $termination
-    ) {
+    )
+    {
         $this->employeePerformance = $employeePerformance;
         $this->leaveApplication = $leaveApplication;
         $this->notice = $notice;
@@ -91,9 +93,11 @@ class HomeController extends Controller
             $attendanceData = $this->attendanceRepository->getEmployeeMonthlyAttendance(date("Y-m-01"), date("Y-m-d"), session('logged_session_data.employee_id'));
 
             $employeePerformance = $this->employeePerformance->select('employee_performance.*', DB::raw('AVG(employee_performance_details.rating) as rating'))
-                ->with(['employee' => function ($d) {
-                    $d->with('department');
-                }])
+                ->with([
+                    'employee' => function ($d) {
+                        $d->with('department');
+                    }
+                ])
                 ->join('employee_performance_details', 'employee_performance_details.employee_performance_id', '=', 'employee_performance.employee_performance_id')
                 ->where('month', function ($query) {
                     $query->select(DB::raw('MAX(`month`) AS month'))->from('employee_performance');
@@ -170,39 +174,49 @@ class HomeController extends Controller
             return view('admin.generalUserHome', $data);
         }
 
-        $hasSupervisorWiseEmployee = $this->employee->select('employee_id')->where('supervisor_id', session('logged_session_data.employee_id'))->get()->toArray();
+        // $hasSupervisorWiseEmployee = $this->employee->select('employee_id')->where('supervisor_id', session('logged_session_data.employee_id'))->get()->toArray();
+
+        $hasSupervisorWiseEmployee = [];
 
         if (count($hasSupervisorWiseEmployee) == 0) {
             $leaveApplication = [];
         } else {
-            $leaveApplication = $this->leaveApplication->with(['employee', 'leaveType'])
-                ->whereIn('employee_id', array_values($hasSupervisorWiseEmployee))
-                ->where('status', 1)
-                ->orderBy('status', 'asc')
-                ->orderBy('leave_application_id', 'desc')
-                ->get();
+
+            // $leaveApplication = $this->leaveApplication->with(['employee', 'leaveType'])
+            //     ->whereIn('employee_id', array_values($hasSupervisorWiseEmployee))
+            //     ->where('status', 1)
+            //     ->orderBy('status', 'asc')
+            //     ->orderBy('leave_application_id', 'desc')
+            //     ->get();
+
+            $leaveApplication = [];
         }
 
         $date = date('Y-m-d');
         $last_day = DATE('Y-m-d', strtotime($date . " -1 day"));
 
         // $attendanceData = DB::select("call `SP_DailyAttendance`('" . $last_day . "')");
+
         $start_time = WorkShift::orderBy('start_time', 'ASC')->first()->start_time;
         $minTime = date('Y-m-d H:i:s', strtotime('-15 minutes', strtotime($start_time)));
 
-        $attendanceData = MsSql::where('datetime', '>=', $minTime)->join('employee', 'employee.finger_id', 'ms_sql.ID')
+        // $attendanceData = MsSql::where('datetime', '>=', $minTime)->join('employee', 'employee.finger_id', 'ms_sql.ID')
+        //     ->orderBy('ms_sql.datetime', 'ASC')->groupBy('ID')->get();
+
+        $attendanceData = MsSql::where('datetime', '>=', $minTime)->join('employee', 'employee.finger_id', 'ms_sql.ID')->join('department', 'department.department_id', '=', 'employee.department_id')
             ->orderBy('ms_sql.datetime', 'ASC')->groupBy('ID')->get();
 
         $count_user_login_today = count($attendanceData);
 
-        $dailyData = $this->employee->select('employee_id', 'first_name', 'finger_id')->where('supervisor_id', session('logged_session_data.employee_id'))->get();
+        // $dailyData = $this->employee->select('employee_id', 'first_name', 'finger_id')->where('supervisor_id', session('logged_session_data.employee_id'))->get();
 
-        $dailyAttendanceData = Employee::select("*")->where('employee.supervisor_id', session('logged_session_data.employee_id'))
-            ->leftJoin('department', 'department.department_id', '=', 'employee.department_id')
-            ->leftJoin('designation', 'designation.designation_id', '=', 'employee.designation_id')
-            ->whereNotIn('finger_id', $dailyData)->get();
+        // $dailyAttendanceData = Employee::select("*")->where('employee.supervisor_id', session('logged_session_data.employee_id'))
+        //     ->leftJoin('department', 'department.department_id', '=', 'employee.department_id')
+        //     ->leftJoin('designation', 'designation.designation_id', '=', 'employee.designation_id')
+        //     ->whereNotIn('finger_id', $dailyData)->get();
 
-        $totalEmployee = $this->employee->where('status', UserStatus::$ACTIVE)->count();
+        $dailyAttendanceData = [];
+        $totalEmployee = $this->employee->without('branch', 'department', 'designation', 'costcenter', 'subdepartment')->where('status', UserStatus::$ACTIVE)->count();
 
         $totalDepartment = $this->department->count();
         $totalDesignation = $this->designation->count();
@@ -210,23 +224,25 @@ class HomeController extends Controller
         $totalCostcenter = $this->costCenter->count();
         $totalContractor = $this->branch->count();
 
-        $employeePerformance = $this->employeePerformance->select('employee_performance.*', DB::raw('AVG(employee_performance_details.rating) as rating'))
-            ->with(['employee' => function ($d) {
-                $d->with('department');
-            }])
-            ->join('employee_performance_details', 'employee_performance_details.employee_performance_id', '=', 'employee_performance.employee_performance_id')
-            ->where('month', function ($query) {
-                $query->select(DB::raw('MAX(`month`) AS month'))->from('employee_performance');
-            })->where('employee_performance.status', 1)->groupBy('employee_id')->get();
+        // $employeePerformance = $this->employeePerformance->select('employee_performance.*', DB::raw('AVG(employee_performance_details.rating) as rating'))
+        //     ->with(['employee' => function ($d) {
+        //         $d->with('department');
+        //     }])
+        //     ->join('employee_performance_details', 'employee_performance_details.employee_performance_id', '=', 'employee_performance.employee_performance_id')
+        //     ->where('month', function ($query) {
+        //         $query->select(DB::raw('MAX(`month`) AS month'))->from('employee_performance');
+        //     })->where('employee_performance.status', 1)->groupBy('employee_id')->get();
 
-        $employeeAward = $this->employeeAward->with(['employee' => function ($d) {
-            $d->with('department');
-        }])->limit(10)->orderBy('employee_award_id', 'DESC')->get();
+        // $employeeAward = $this->employeeAward->with(['employee' => function ($d) {
+        //     $d->with('department');
+        // }])->limit(10)->orderBy('employee_award_id', 'DESC')->get();
 
+        $employeeAward = [];
         $employeePerformance = [];
         $dailyData = [];
+        $notice = [];
 
-        $notice = $this->notice->with('createdBy')->orderBy('notice_id', 'DESC')->where('status', 'Published')->get();
+        // $notice = $this->notice->with('createdBy')->orderBy('notice_id', 'DESC')->where('status', 'Published')->get();
 
         // date of birth in this month
         $firstDayThisMonth = date('Y-m-d');
@@ -243,7 +259,10 @@ class HomeController extends Controller
         $to_month = $to_date_explode[1];
         $concatToDayAndMonth = $to_month . '-' . $to_day;
 
-        $upcoming_birtday = Employee::orderBy('date_of_birth', 'desc')->whereRaw("DATE_FORMAT(date_of_birth, '%m-%d') >= '" . $concatFormDayAndMonth . "' AND DATE_FORMAT(date_of_birth, '%m-%d') <= '" . $concatToDayAndMonth . "' ")->get();
+        $upcoming_birtday = Employee::without('branch', 'department', 'designation', 'costcenter', 'subdepartment')->orderBy('date_of_birth', 'desc')->whereRaw("DATE_FORMAT(date_of_birth, '%m-%d') >= '" . $concatFormDayAndMonth . "' AND DATE_FORMAT(date_of_birth, '%m-%d') <= '" . $concatToDayAndMonth . "' ")->get();
+
+        $date = date('Y-m-d', strtotime('-1 days'));
+        $ctc = DailyCostToCompany::where('date', $date)->first();
 
         $data = [
             'attendanceData' => $attendanceData,
@@ -267,6 +286,7 @@ class HomeController extends Controller
             'dailyData' => $dailyData,
             'last_log_date' => $last_log_date,
             'setting_sync_live' => $setting_sync_live,
+            'ctc' => $ctc,
 
         ];
 

@@ -24,7 +24,6 @@ use App\Model\SubDepartment;
 use App\Repositories\AttendanceRepository;
 use App\Repositories\PayrollRepository;
 use Carbon\Carbon;
-use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -276,8 +275,6 @@ class SalaryController extends Controller
 
     public function sheet(Request $request)
     {
-        // dd($request->all());
-
         $employeePayroll = [];
         $employeePayroll = PayRoll::whereRaw('month= ' . date('m', strtotime($request->month)) . ' and year= ' . date('Y', strtotime($request->month)) . ' and employee=' . $request->employee_id . '')->first();
 
@@ -340,10 +337,6 @@ class SalaryController extends Controller
 
             $wageTo = date('F', strtotime($tdate));
 
-            // $monthlyWorkingDays = MonthlyWorkingDay::where('year', date('Y', strtotime($month)))->first();
-
-            // $payrollSetting = PayRollSetting::first();
-
             $monthName = strtolower(substr($monthName, 0, 3));
 
             $totalWorkingDays = $monthlyWorkingDays->$monthName;
@@ -352,10 +345,7 @@ class SalaryController extends Controller
 
             $workingDates = $this->number_of_working_days_date($fdate, $tdate);
 
-            // $employeeInOutData = EmployeeInOutData::where('finger_print_id', $employeeAllInfo->finger_id)->whereBetween('date', [$fdate, $tdate])->where('attendance_status', AttendanceStatus::$PRESENT)->get();
-            $employeeInOutData = EmployeeInOutData::where('finger_print_id', $employeeAllInfo->finger_id)->whereBetween('date', [$fdate, $tdate])->get();
-
-            // $holidayDetails = DB::select(DB::raw('call SP_getHoliday("' . $fdate . '","' . $tdate . '")'));
+            $employeeInOutData = EmployeeInOutData::where('finger_print_id', $employeeAllInfo->finger_id)->whereBetween('date', [$fdate, $tdate])->with('workShift:work_shift_id,start_time,end_time,shift_name')->get();
 
             $companyHolidayDetails = DB::select(DB::raw('call SP_getCompanyHoliday("' . $fdate . '","' . $tdate . '","' . $employeeAllInfo->employee_id . '")'));
 
@@ -392,17 +382,8 @@ class SalaryController extends Controller
 
             foreach ($employeeInOutData as $key => $inOutData) {
 
-                if (isset($inOutData->working_time)) {
-                    $workingTime = new DateTime($inOutData->working_time);
-                    $fullDay = new DateTime(PayrollConstant::$FULL_DAY);
-                    $halfDay = new DateTime(PayrollConstant::$HALF_DAY);
-                    if ($workingTime >= $fullDay) {
-                        (float) $totalPresent += 1;
-                    } elseif ($workingTime >= $halfDay) {
-                        (float) $totalPresent += 0.5;
-                    } elseif ($workingTime < $halfDay) {
-                        (float) $totalPresent += 0;
-                    }
+                if (isset($inOutData->mandays) && $inOutData->mandays != null) {
+                    (float) $totalPresent += (float) $inOutData->mandays;
                 }
 
                 if ($inOutData->over_time != null && $inOutData->over_time != PayrollConstant::$EMPTY_TIME && $inOutData->over_time_status == OvertimeStatus::$OT_FOUND_AND_APPROVED) {
@@ -691,7 +672,6 @@ class SalaryController extends Controller
     public function calculateEmployeeTotalWorkingHour($workingHour)
     {
 
-        $totalMinute = 0;
         $hour = 0;
         $minutes = 0;
 

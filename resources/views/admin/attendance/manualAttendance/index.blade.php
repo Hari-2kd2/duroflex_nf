@@ -17,11 +17,7 @@
         height: 100%;
     }
 </style>
-<script>
-    jQuery(function() {
-        $("#employeeAttendance").validate();
-    });
-</script>
+
 <div class="container-fluid">
     <div class="row bg-title">
         <div class="col-lg-5 col-md-5 col-sm-5 col-xs-12">
@@ -57,25 +53,28 @@
                         @endif
                         <div class="row">
                             <div id="searchBox">
-                                {{ Form::open(['route' => 'manualAttendance.filter', 'id' => 'employeeAttendance', 'method' => 'GET']) }}
+                                {{ Form::open(['route' => 'manualAttendance.filter', 'id' => 'employeeAttendance', 'method' => 'POST']) }}
                                 <div class="col-md-2"></div>
                                 <div class="col-md-3">
-                                    <label class="control-label" for="email">@lang('common.name')<span
+                                    <label class="control-label" for="email">@lang('common.branch')<span
                                             class="validateRq">*</span></label>
-                                    <div class="input-group">
+                                    <div class="form-group">
                                         <select class="form-control employee_id select2 required" required
-                                            name="employee_id">
+                                            name="branch_id">
                                             <option value="">---- @lang('common.please_select') ----</option>
-                                            @foreach ($employeeList as $value)
-                                                <option value="{{ $value->employee_id }}"
-                                                    @if (isset($_REQUEST['employee_id'])) @if ($_REQUEST['employee_id'] == $value->employee_id) {{ 'selected' }} @endif
-                                                    @endif>
-                                                    {{ $value->first_name . ' ' . $value->last_name . ' (' . $value->finger_id . ')' }}
-                                                </option>
+                                            @foreach ($branchList as $key => $value)
+                                                @if ($key > 0)
+                                                    <option value="{{ $key }}"
+                                                        @if (isset($_REQUEST['branch_id'])) @if ($_REQUEST['branch_id'] == $key) {{ 'selected' }} @endif
+                                                        @endif>
+                                                        {{ $value }}
+                                                    </option>
+                                                @endif
                                             @endforeach
                                         </select>
                                     </div>
                                 </div>
+
                                 <div class="col-md-3">
                                     <label class="control-label" for="email">@lang('common.date')<span
                                             class="validateRq">*</span></label>
@@ -98,119 +97,83 @@
                             </div>
                         </div>
                         <hr>
-                        @if (isset($attendanceData))
-                            {{ Form::open(['route' => 'manualAttendance.store', 'id' => 'employeeAttendance']) }}
 
-                            <input type="hidden" name="employee_id" value="{{ $_REQUEST['employee_id'] }}">
-                            <input type="hidden" name="date" value="{{ $_REQUEST['date'] }}">
+                        @if (count($results) > 0)
 
-                            <div class="table-responsive" style="height: 40vh;overflow:auto">
-                                <table class="table table-bordered"
-                                    style="position:absolute;table-layout:fixed;max-width:94%;min-width:92%;margin:auto">
+                            <br>
+                            <div class="table-responsive">
+
+                                <table id="myTable" class="table table-bordered">
+
                                     <thead class="tr_header">
                                         <tr>
                                             <th style="width:60px;">@lang('common.serial')</th>
-                                            <th>Employee</th>
+                                            <th>Date</th>
+                                            <th>Name</th>
+                                            <th>Employee Id</th>
                                             <th>@lang('attendance.in_time')</th>
                                             <th>@lang('attendance.out_time')</th>
-                                            <th>Brief Details</th>
                                             <th>@lang('attendance.updated_by')</th>
-                                            {{-- <th>Action</th> --}}
+                                            <th>Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        @if (count($attendanceData) > 0)
-                                            @foreach ($attendanceData as $key => $value)
-                                                <tr>
-                                                    <td style="font-weight: 400">{{ $key + 1 }}</td>
-                                                    <td style="font-weight: 400">{{ $value->fullName }}
-                                                        <br>{{ $value->finger_id }}
-                                                    </td>
-                                                    <td style="font-weight: 400">
-                                                        <div class="input-group">
-                                                            <div class="input-group-addon">
-                                                                <i class="fa fa-clock-o"></i>
-                                                            </div>
-                                                            <div class="">
-                                                                <input type="hidden" name="finger_print_id[]"
-                                                                    value="{{ $value->finger_id }}">
-                                                                <input class="form-control" id="datetimepicker1"
-                                                                    type="text" placeholder="@lang('attendance.in_time')"
-                                                                    name="inTime[]" value="{{ $value->inTime }}"
-                                                                    autocomplete="off" required>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td style="font-weight: 400;">
-                                                        <div class="input-group">
-                                                            <div class="input-group-addon">
-                                                                <i class="fa fa-clock-o"></i>
-                                                            </div>
-                                                            <div class="">
-                                                                <input class="form-control" id="datetimepicker2"
-                                                                    type="text" placeholder="@lang('attendance.out_time')"
-                                                                    name="outTime[]" value="{{ $value->outTime }}"
-                                                                    autocomplete="off" required>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td style="font-weight: 400">
-                                                        {{ 'Shift: ' }}
-                                                        <b>{{ $value->shiftName ? $value->shiftName : 'NA' . ',' }}</b>
-                                                        {{ 'EarlyBy: ' }}
-                                                        <b>{{ $value->earlyBy != null ? date('H:i', strtotime($value->earlyBy)) : '00:00' . ',' }}</b>
-                                                        {{ 'LateBy: ' }}
-                                                        <b>{{ $value->lateBy != null ? date('H:i', strtotime($value->lateBy)) : '00:00' . ',' }}
-                                                        </b><br>
-                                                        {{ 'Work.Time: ' }}
-                                                        <b>{{ $value->workingTime != null ? date('H:i', strtotime($value->workingTime)) : '00:00' . ',' }}</b>
-                                                        {{ 'O.T: ' }}
-                                                        <b>{{ $value->overTime != null ? date('H:i', strtotime($value->overTime)) : '00:00' . ',' }}</b>
-                                                    </td>
-                                                    <td style="font-weight: 400">
-                                                        @php
-                                                            $employee = App\Model\Employee::where('employee_id', $value->updatedBy)
-                                                                ->select('first_name', 'last_name')
-                                                                ->first();
-                                                        @endphp
-                                                        @if ($employee && $value->updatedAt && $value->updatedAt != null)
-                                                            {{ $employee->first_name . ' ' . $employee->last_name }}
-                                                            <br>
-                                                            {{ date('Y-m-d h:i A', strtotime($value->updatedAt)) }}
-                                                        @else
-                                                            {{ 'NA' }} <br>
-                                                            {{ '0000-00-00 00:00:00' }}
-                                                        @endif
-                                                    </td>
-                                                    {{-- <td>
-                                                        @if (count($attendanceData) > 0)
-                                                            <button type="submit" class="btn btn-info btn_style"><i
-                                                                    class="fa fa-check"></i>
-                                                                @lang('common.save')</button>
-                                                        @endif
-                                                    </td> --}}
 
-                                                </tr>
-                                            @endforeach
-                                        @else
-                                            <tr>
-                                                <td colspan="5">@lang('attendance.no_data_available')</td>
+                                    <tbody>
+
+                                        @foreach ($results as $key => $value)
+                                            <tr class="{{ $value->finger_print_id }}">
+                                                <td style="font-weight: 400">{{ 1 + $key }}</td>
+                                                <td style="font-weight: 400">{{ $_REQUEST['date'] }}</td>
+                                                <td style="font-weight: 400;">
+                                                    {{ ucwords(trim($value->employee->first_name . ' ' . $value->employee->last_name)) }}
+                                                </td>
+                                                <td style="font-weight: 400;">
+                                                    {{ $value->finger_print_id }}
+                                                </td>
+                                                <td style="width: 190px">
+                                                    <div class="input-group">
+                                                        <input
+                                                            class="form-control datetime-local intime{{ $value->finger_print_id }}"
+                                                            type="datetime-local" placeholder="@lang('attendance.in_time')"
+                                                            name="in_time" value="{{ $value->in_time }}">
+                                                    </div>
+                                                </td>
+                                                <td style="width: 190px">
+                                                    <div class="input-group">
+                                                        <input
+                                                            class="form-control datetime-local outtime{{ $value->finger_print_id }}"
+                                                            type="datetime-local" placeholder="@lang('attendance.out_time')"
+                                                            name="out_time" value="{{ $value->out_time }}">
+                                                    </div>
+                                                </td>
+                                                <td style="font-weight: 400">
+                                                    @if ($value->updated_at != null)
+                                                        {{ ucwords(trim($value->updatedBy->first_name . ' ' . $value->updatedBy->last_name)) }}
+                                                        {{ '@ ' . date('Y-m-d h:i A', strtotime($value->updated_at)) }}
+                                                    @else
+                                                        {{ 'NA @' }}
+                                                        {{ '0000-00-00 00:00:00' }}
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    @if (count($results) > 0)
+                                                        <a type="submit" href="{!! route('manualAttendance.individualReport', [
+                                                            'finger_print_id' => $value->finger_print_id,
+                                                        ]) !!}"
+                                                            data-token="{!! csrf_token() !!}"
+                                                            data-id="{!! $value->finger_id !!}"
+                                                            class="generateReportIndividually">
+                                                            <button class="btn btn-instagram btn-sm" id="rptSave"><i
+                                                                    class="fa fa-check"
+                                                                    style="padding-right:4px"></i>@lang('common.save')</button></a>
+                                                    @endif
+                                                </td>
                                             </tr>
-                                        @endif
+                                        @endforeach
                                     </tbody>
                                 </table>
                             </div>
-                            @if (count($attendanceData) > 0)
-                                <div class="form-actions text-center">
-                                    <div class="row">
-                                        <div class="col-md-12 ">
-                                            <button type="submit" id="save" class="btn btn-info btn_style"><i
-                                                    class="fa fa-check"></i> @lang('common.save')</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-                            {{ Form::close() }}
+
                         @endif
                     </div>
                 </div>
@@ -222,73 +185,87 @@
 
 @section('page_scripts')
 <script>
-    // date object conversion from string
-    var startDate = $('.dateField').val().split("/");
-    var startDay = new Date(startDate[2], startDate[1] - 1, startDate[0]);
-    var year = startDay.getFullYear();
-    var month = (startDay.getMonth() + 1) >= 9 ? (startDay.getMonth() + 1) : '0' + (startDay.getMonth() + 1);
-    var date = startDay.getDate() >= 9 ? startDay.getDate() : '0' + startDay.getDate();
-    var nextDate = startDay.getDate() >= 9 ? (startDay.getDate() + +1) : '0' + (startDay.getDate() + +1);
-    var formattedDate = [year, month, date].join('-');
-    var formattedNextDate = [year, month, nextDate].join('-');
-
-
-    $('#datetimepicker1').datetimepicker({
+    $('.datetime').datetimepicker({
+        inline: true,
         format: 'YYYY-MM-DD HH:mm:ss',
         maxDate: new Date(),
-    }).on('dp.change', function(e) {
-        // disable submit button
-        $('#save').prop('disabled', false);
-
-        var inTime = $('#datetimepicker1').val();
-        var filterDate = formattedDate + ' 00:00:00';
-
-        if (inTime < filterDate) {
-
-            $('#save').prop('disabled', true);
-
-            // toasting error message 
-            $.toast({
-                heading: 'Warning',
-                text: 'IN-TIME is Invalid...!',
-                position: 'top-right',
-                loaderBg: '#ff6849',
-                icon: 'success',
-                hideAfter: 3000,
-                stack: 1
-            });
-
-            $('#datetimepicker1').val('')
+        icons: {
+            time: "fa fa-clock-o",
+            date: "fa fa-calendar",
+            up: "fa fa-arrow-up",
+            down: "fa fa-arrow-down"
         }
+    }).on('dp.change', function(e) {
+        var formatedValue = e.date.format(e.date._f);
+        console.log(formatedValue);
     });
+</script>
 
-    $('#datetimepicker2').datetimepicker({
-        format: 'YYYY-MM-DD HH:mm:ss',
-        maxDate: new Date(),
-    }).on('dp.change', function(e) {
-        // disable submit button
-        $('#save').prop('disabled', false);
+<script>
+    $(document).on('click', '.generateReportIndividually', function(e) {
+        e.preventDefault();
 
-        var outTime = $('#datetimepicker2').val();
-        var filterNextDate = formattedNextDate + ' 00:00:00';
+        var actionTo = $(this).attr('href');
 
-        if (outTime > filterNextDate) {
-
-            $('#save').prop('disabled', true);
-
-            // toasting error message 
-            $.toast({
-                heading: 'Warning',
-                text: 'OUT-TIME is Invalid...!',
-                position: 'top-right',
-                loaderBg: '#ff6849',
-                icon: 'success',
-                hideAfter: 3000,
-                stack: 1
-            });
-
-            $('#datetimepicker2').val('')
+        var qs = actionTo.substring(actionTo.indexOf('?') + 1).split('&');
+        for (var i = 0, result = {}; i < qs.length; i++) {
+            qs[i] = qs[i].split('=');
+            result[qs[i][0]] = decodeURIComponent(qs[i][1]);
         }
+
+        var in_time = $('.intime' + result.finger_print_id).val();
+        var out_time = $('.outtime' + result.finger_print_id).val();
+        var token = $(this).attr('data-token');
+        var id = $(this).attr('data-id');
+        console.log(out_time);
+        $.ajax({
+            url: actionTo + '&in_time=' + in_time + '&out_time=' + out_time,
+            type: 'POST',
+            data: {
+                _method: 'POST',
+                _token: token
+            },
+            success: function(data) {
+                console.log(data);
+                if (data == 'success') {
+
+                    // toasting success message 
+                    $.toast({
+                        heading: 'Success',
+                        text: 'Manual attendance has been saved...!',
+                        position: 'top-right',
+                        loaderBg: '#ff6849',
+                        icon: 'success',
+                        hideAfter: 2000,
+                        stack: 6
+                    });
+
+                } else {
+                    // toasting error message 
+                    $.toast({
+                        heading: 'Error',
+                        text: 'Something went wrong!',
+                        position: 'top-right',
+                        loaderBg: '#ff6849',
+                        icon: 'warning',
+                        hideAfter: 3000,
+                        stack: 6
+                    });
+                }
+
+                setInterval(() => {
+                    location.reload();
+                }, 2000);
+
+            }
+        });
+    });
+</script>
+
+<script>
+    $('.data').on('click', '.pagination a', function(e) {
+        getData($(this).attr('href').split('page=')[1]);
+        e.preventDefault();
     });
 </script>
 @endsection

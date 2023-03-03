@@ -36,29 +36,32 @@ class DeviceController extends Controller
     }
 
     public function importlogs(Request $request)
-    {	 
-	
-       
-	try{
-	Log::info('import done at :' . date('Y-m-d H:i:s'));
-        DB::beginTransaction();
-        $device = new MsSql();
-	$device->local_primary_id = $request->primary_id;
-        $device->ID = $request->ID;
-        $device->datetime = $request->datetime;
-        $device->created_at = date('Y-m-d H:i:s');
-        $device->updated_at = date('Y-m-d H:i:s');
-        $device->devdt = $request->devdt;
-        $device->punching_time = $request->punching_time;
-        $device->evtlguid = $request->evtlguid;
+    {
+        try {
 
-        $device->save();
-        DB::commit();
-	}catch(\Exception $e){
-	info($e->getMessage());
-	}
+            Log::info('import done at :' . date('Y-m-d H:i:s'));
+            DB::beginTransaction();
 
-        return json_encode(['status' => 'success', 'message' => 'Device Log Successfully updated !'], 200);
+            $device = new MsSql();
+            $device->local_primary_id = $request->primary_id;
+            $device->evtlguid = $request->evtlguid;
+            $device->ID = $request->ID;
+            $device->datetime = $request->datetime;
+            $device->devdt = $request->devdt;
+            $device->devuid = $request->devuid;
+            $device->punching_time = $request->punching_time;
+            $device->created_at = date('Y-m-d H:i:s');
+            $device->updated_at = date('Y-m-d H:i:s');
+
+            $device->save();
+            DB::commit();
+
+        } catch (\Throwable$th) {
+            //throw $th;
+            info($th->getMessage());
+        }
+
+        return response()->json(['status' => 'success', 'message' => 'Device Log Successfully updated !'], 200);
     }
 
     public function destroy(Request $request)

@@ -2,17 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Model\EmployeeAttendance;
-use App\Model\EmployeeInOutData;
-use App\Model\MsSql;
-use App\Repositories\ApiAttendanceRepository;
 use Carbon\Carbon;
+use App\Model\MsSql;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use App\Model\EmployeeInOutData;
+use App\Model\EmployeeAttendance;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use App\Repositories\ApiAttendanceRepository;
 
 class AttendanceController extends Controller
 {
@@ -49,7 +50,7 @@ class AttendanceController extends Controller
     public function loghistory()
     {
         $localLogID = MsSql::orderBy('primary_id', 'DESC')->first();
-        return response()->json(['status' => 'success', 'message' => 'Successfully updated !', 'data' => $localLogID], 200);
+        return json_encode(['status' => 'success', 'message' => 'Successfully updated !', 'data' => $localLogID], 200);
     }
 
     protected $apiAttendanceRepository;
@@ -80,7 +81,7 @@ class AttendanceController extends Controller
         if ($base64_image != 'null' && isset($base64_image)) {
             @list($type, $file_data) = explode(';', $base64_image);
             @list(, $file_data) = explode(',', $file_data);
-            $imageName = \md5(str_random(30) . time() . '_' . uniqid()) . '.' . 'jpg';
+            $imageName = \md5(Str::random(30) . time() . '_' . uniqid()) . '.' . 'jpg';
             $employeePhoto['face_id'] = $imageName;
             Storage::disk('faceid')->put($imageName, base64_decode($base64_image));
         }
@@ -115,8 +116,7 @@ class AttendanceController extends Controller
 
             DB::commit();
             $bug = 0;
-        } catch (\Exception $e) {
-            return $e;
+        } catch (\Exception$e) {
             DB::rollback();
             $bug = 1;
         }
@@ -174,7 +174,7 @@ class AttendanceController extends Controller
                 ]);
                 DB::commit();
                 $bug = 0;
-            } catch (\Exception $e) {
+            } catch (\Exception$e) {
                 return $e;
                 DB::rollback();
                 $bug = 1;
@@ -251,7 +251,7 @@ class AttendanceController extends Controller
             $attendanceData = EmployeeAttendance::create($employeeData);
             DB::commit();
             $bug = 0;
-        } catch (\Exception $e) {
+        } catch (\Exception$e) {
             return $e;
             DB::rollback();
             $bug = 1;

@@ -104,7 +104,7 @@
                 <h3 class="box-title"> @lang('dashboard.total_employee') </h3>
                 <ul class="list-inline two-part">
                     <li>
-                        <img class="dash_image" height="40" src="{{ asset('admin_assets/img/employee.png') }}">
+                        <img class="dash_image" src="{{ asset('admin_assets/img/employee.png') }}">
                     </li>
                     <li class="text-right"><i class="ti-arrow-up text-success"></i> <span
                             class="counter text-success">{{ $totalEmployee }}</span></li>
@@ -117,7 +117,7 @@
                 <h3 class="box-title">@lang('common.designation')</h3>
                 <ul class="list-inline two-part">
                     <li>
-                        <img class="dash_image" height="40" src="{{ asset('admin_assets/img/department.png') }}">
+                        <img class="dash_image"  src="{{ asset('admin_assets/img/department.png') }}">
                     </li>
                     <li class="text-right"><i class="ti-arrow-up text-purple"></i> <span
                             class="counter text-purple">{{ $totalDesignation }}</span></li>
@@ -130,7 +130,7 @@
                 <h3 class="box-title">@lang('dashboard.total_department')</h3>
                 <ul class="list-inline two-part">
                     <li>
-                        <img class="dash_image" height="40" src="{{ asset('admin_assets/img/department.png') }}">
+                        <img class="dash_image"  src="{{ asset('admin_assets/img/department.png') }}">
                     </li>
                     <li class="text-right"><i class="ti-arrow-up text-purple"></i> <span
                             class="counter text-purple">{{ $totalDepartment }}</span></li>
@@ -143,7 +143,7 @@
                 <h3 class="box-title">@lang('common.sub_department')</h3>
                 <ul class="list-inline two-part">
                     <li>
-                        <img class="dash_image" height="40" src="{{ asset('admin_assets/img/department.png') }}">
+                        <img class="dash_image"  src="{{ asset('admin_assets/img/department.png') }}">
                     </li>
                     <li class="text-right"><i class="ti-arrow-up text-purple"></i> <span
                             class="counter text-purple">{{ $totalUnit }}</span></li>
@@ -156,7 +156,7 @@
                 <h3 class="box-title">@lang('common.cost_center')</h3>
                 <ul class="list-inline two-part">
                     <li>
-                        <img class="dash_image" height="40" src="{{ asset('admin_assets/img/department.png') }}">
+                        <img class="dash_image"  src="{{ asset('admin_assets/img/department.png') }}">
                     </li>
                     <li class="text-right"><i class="ti-arrow-up text-purple"></i> <span
                             class="counter text-purple">{{ $totalCostcenter }}</span></li>
@@ -169,7 +169,7 @@
                 <h3 class="box-title">@lang('common.branch')</h3>
                 <ul class="list-inline two-part">
                     <li>
-                        <img class="dash_image" height="40" src="{{ asset('admin_assets/img/department.png') }}">
+                        <img class="dash_image" src="{{ asset('admin_assets/img/department.png') }}">
                     </li>
                     <li class="text-right"><i class="ti-arrow-up text-purple"></i> <span
                             class="counter text-purple">{{ $totalContractor }}</span></li>
@@ -182,7 +182,7 @@
                 <h3 class="box-title">@lang('dashboard.total_present')</h3>
                 <ul class="list-inline two-part">
                     <li>
-                        <img class="dash_image" height="40" src="{{ asset('admin_assets/img/present.png') }}">
+                        <img class="dash_image"  src="{{ asset('admin_assets/img/present.png') }}">
                     </li>
                     <li class="text-right"><i class="ti-arrow-up text-info"></i> <span
                             class="counter text-info">{{ $totalAttendance }}</span></li>
@@ -195,7 +195,7 @@
                 <h3 class="box-title">@lang('dashboard.total_absent')</h3>
                 <ul class="list-inline two-part">
                     <li>
-                        <img class="dash_image" height="40" src="{{ asset('admin_assets/img/absent.png') }}">
+                        <img class="dash_image" src="{{ asset('admin_assets/img/absent.png') }}">
                     </li>
                     <li class="text-right"><i id="absentDetail" class="ti-arrow-down text-danger"></i>
                         <span class="counter text-danger">{{ $totalAbsent }}</span>
@@ -278,6 +278,44 @@
     </div>
 
     <div class="row">
+        <div class="col-md-12 col-lg-12 col-sm-12" style="display:inline-table;">
+            <div class="white-box" style="height:200px">
+                <div class="box-title"> Cost To the Company </div>
+                <div class="table-responsive scroll-hide" style="padding: 4px;">
+                    <table class="table table-hover table-borderless manage-u-table">
+                        <thead>
+                            <tr class="">
+                                <th class="text-center">Sl.No</th>
+                                <th class="text-center">Date</th>
+                                <th class="text-center">Total Employee</th>
+                                <th class="text-center">Present</th>
+                                <th class="text-center">Absent</th>
+                                <th class="text-center">CTC in INR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if ($ctc != null)
+                                <tr>
+                                    <td class="text-center">1</td>
+                                    <td class="text-center">{{ DateConvertDBToForm($ctc->date) }}</td>
+                                    <td class="text-center">{{ $ctc->employee . " No's" }}</td>
+                                    <td class="text-center">{{ $ctc->present . " No's" }}</td>
+                                    <td class="text-center">{{ $ctc->absent . " No's" }}</td>
+                                    <td class="text-center">{{ number_format($ctc->total_ctc, 2, '.', '') }}</td>
+                                </tr>
+                            @else
+                                <tr>
+                                    <td class="text-center" colspan="8">@lang('common.no_data_available')</td>
+                                </tr>
+                            @endif
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
         @if ($ip_attendance_status == 1)
             <!-- employe attendance  -->
             @php
@@ -338,11 +376,11 @@
                     <table class="table table-hover table-borderless manage-u-table">
                         <thead>
                             <tr class="">
-                                <td class="text-center">#</td>
-                                <td>@lang('dashboard.photo')</td>
-                                <td>Employee ID</td>
-                                <td>@lang('common.name')</td>
-                                <td>Time</td>
+                                <th class="text-center">#</th>
+                                <th>@lang('dashboard.photo')</th>
+                                <th>Employee ID</th>
+                                <th>@lang('common.name')</th>
+                                <th>Time</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -351,7 +389,7 @@
                                 @foreach ($attendanceData as $dailyAttendance)
                                     <tr>
                                         <td class="text-center">{{ ++$dailyAttendanceSl }}</td>
-                                        <td>
+                                        <td class="text-center">
                                             @if ($dailyAttendance->photo != '')
                                                 <img style=" width: 70px; " src="{!! asset('uploads/employeePhoto/' . $dailyAttendance->photo) !!}"
                                                     alt="user-img" class="img-circle">
@@ -360,12 +398,13 @@
                                                     alt="user-img" class="img-circle">
                                             @endif
                                         </td>
-                                        <td>{{ $dailyAttendance->finger_id }}</td>
-                                        <td>{{ $dailyAttendance->first_name . ' ' . $dailyAttendance->last_name }}
-                                            <br /><span
-                                                class="text-muted">{{ App\Model\Department::where('department_id', $dailyAttendance->department_id)->first()->department_name }}</span>
+                                        <td class="text-center">{{ $dailyAttendance->finger_id }}</td>
+                                        <td class="text-center">
+                                            {{ $dailyAttendance->first_name . ' ' . $dailyAttendance->last_name }}<br>
+                                            <span class="text-muted">{{ $dailyAttendance->department_name }}</span>
                                         </td>
-                                        <td>{{ date('H:i', strtotime($dailyAttendance->datetime)) }}</td>
+                                        <td class="text-center">
+                                            {{ date('H:i', strtotime($dailyAttendance->datetime)) }}</td>
                                     </tr>
                                 @endforeach
                             @else

@@ -21,9 +21,7 @@ class ShiftDetailsController extends Controller
 
     public function index(Request $request)
     {
-        $results = EmployeeShift::orderBy('employee_shift_id', 'desc')->get();
         $results = [];
-
         $shift = [];
 
         $workShift = WorkShift::all();
@@ -33,7 +31,7 @@ class ShiftDetailsController extends Controller
         }
 
         if ($_POST) {
-            $results = EmployeeShift::where('month', $request->yearAndMonth)->orderBy('employee_shift_id', 'desc')->get();
+            $results = EmployeeShift::with('updated_user')->where('month', $request->yearAndMonth)->orderBy('employee_shift_id', 'desc')->get();
         }
 
         return view('admin.attendance.employeeShift.index', ['results' => $results, 'month' => $request->month, 'yearAndMonth' => $request->yearAndMonth, 'shift' => $shift]);
@@ -146,7 +144,7 @@ class ShiftDetailsController extends Controller
                 $sundays[(int) $value['day']] = false;
             }
 
-            if($ifPublicHoliday){
+            if ($ifPublicHoliday) {
                 $ph[(int) $value['day']] = $this->cellRange($countDays)[$key];
             }
         }
@@ -223,7 +221,7 @@ class ShiftDetailsController extends Controller
                 $sundays[(int) $value['day']] = false;
             }
 
-            if($ifPublicHoliday){
+            if ($ifPublicHoliday) {
                 $ph[(int) $value['day']] = $this->cellRange($countDays)[$key];
             }
         }

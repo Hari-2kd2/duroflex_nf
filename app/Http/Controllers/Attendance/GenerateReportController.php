@@ -6,6 +6,7 @@ use App\Console\Commands\CalculateAttendance;
 use App\Http\Controllers\Controller;
 use App\Lib\Enumerations\AttendanceStatus;
 use App\Lib\Enumerations\GeneralStatus;
+use App\Lib\Enumerations\MandayStatus;
 use App\Lib\Enumerations\PayrollConstant;
 use App\Lib\Enumerations\UserStatus;
 use App\Model\Employee;
@@ -80,7 +81,7 @@ class GenerateReportController extends Controller
             $bug = $th->getMessage();
             info($bug);
             ob_end_flush();
-            return redirect()->back()->with('error', 'Something went wrong, Please try again!' . $bug);
+            return redirect()->back()->with('error', 'Something went wrong, Please try again!');
         }
 
     }
@@ -109,15 +110,14 @@ class GenerateReportController extends Controller
         if (($recompute && !$if_manual_override_exists) || ($recompute == false && $manualAttendance)) {
             if ($data_format != []) {
                 if (!$if_exists) {
-                    // info('!empty Create');
                     EmployeeInOutData::insert($data_format);
+                    return true;
                 } else {
-                    // info('!empty Updated');
                     unset($data_format['created_by']);
                     unset($data_format['created_at']);
                     $if_exists->update($data_format);
                     $if_exists->save();
-
+                    return true;
                 }
 
             } else {
@@ -125,27 +125,36 @@ class GenerateReportController extends Controller
                 $tempArray = [];
 
                 $govtHolidays = DB::select(DB::raw('call SP_getHoliday("' . $data_format['date'] . '","' . $data_format['date'] . '")'));
+                $companyHolidayDetails = DB::select(DB::raw('call SP_getCompanyHoliday("' . $data_format['date'] . '","' . $data_format['date'] . '","' . $employee_id . '")'));
 
                 if ($data_format['date'] > date("Y-m-d")) {
+
                     $tempArray['attendance_status'] = AttendanceStatus::$FUTURE;
+                    $tempArray['mandays'] = MandayStatus::$INVALID;
+
                 } else {
-                    $ifHoliday = $this->attendanceRepository->ifHoliday($govtHolidays, $data_format['date'], $employee_id);
-                    if ($ifHoliday['weekly_holiday'] == true) {
+
+                    $ifHoliday = $this->ifHoliday($govtHolidays, $data_format['date']);
+                    $ifCompanyHoliday = $this->ifCompanyHoliday($companyHolidayDetails, $data_format['date']);
+
+                    if ($ifHoliday) {
                         $tempArray['attendance_status'] = AttendanceStatus::$HOLIDAY;
-                    } elseif ($ifHoliday['govt_holiday'] == true) {
+                        $tempArray['mandays'] = MandayStatus::$PAID_HOLIDAY;
+                    } elseif ($ifCompanyHoliday) {
                         $tempArray['attendance_status'] = AttendanceStatus::$HOLIDAY;
+                        $tempArray['mandays'] = MandayStatus::$COMPANY_HOLIDAY;
                     } else {
                         $tempArray['attendance_status'] = AttendanceStatus::$ABSENT;
+                        $tempArray['mandays'] = MandayStatus::$ABSENT;
                     }
+
                 }
 
                 if (!$if_exists) {
                     $data_format['attendance_status'] = $tempArray['attendance_status'];
-                    // info('empty Create');
                     EmployeeInOutData::insert($data_format);
                 } else {
                     $data_format['attendance_status'] = $tempArray['attendance_status'];
-                    // info('empty Update');
                     $if_exists->update($data_format);
                     $if_exists->save();
                 }
@@ -158,7 +167,6 @@ class GenerateReportController extends Controller
 
     public function calculate_attendance($finger_id, $employee_id, $date, $in_time = '', $out_time = '', $manualAttendance = false, $recompute = false)
     {
-        // info('Calculate attendance function ' . $finger_id . '.....................');
 
         $month = date('Y-m', strtotime($date));
         $dataSet = [];
@@ -232,6 +240,7 @@ class GenerateReportController extends Controller
             $attendance_data['device_name'] = null;
             $attendance_data['status'] = 1;
             $attendance_data['attendance_status'] = AttendanceStatus::$ABSENT;
+            $attendance_data['mandays'] = MandayStatus::$ABSENT;
             $attendance_data['created_at'] = date('Y-m-d H:i:s');
             $attendance_data['updated_at'] = date('Y-m-d H:i:s');
             $attendance_data['created_by'] = isset(auth()->user()->user_id) ? auth()->user()->user_id : null;
@@ -251,6 +260,7 @@ class GenerateReportController extends Controller
             $attendance_data['device_name'] = $results[0]->device_name;
             $attendance_data['status'] = 1;
             $attendance_data['attendance_status'] = AttendanceStatus::$ONETIMEINPUNCH;
+            $attendance_data['mandays'] = MandayStatus::$INVALID;
             $attendance_data['created_at'] = date('Y-m-d H:i:s');
             $attendance_data['updated_at'] = date('Y-m-d H:i:s');
             $attendance_data['created_by'] = isset(auth()->user()->user_id) ? auth()->user()->user_id : null;
@@ -270,7 +280,8 @@ class GenerateReportController extends Controller
             $attendance_data['device_name'] = $results[0]->device_name;
             $attendance_data['status'] = 1;
             $explode = explode(':', $attendance_data['working_time']);
-            $attendance_data['attendance_status'] = $explode[0] >= 8 ? AttendanceStatus::$PRESENT : AttendanceStatus::$LESSHOURS;
+            $attendance_data['attendance_status'] = null;
+            $attendance_data['mandays'] = null;
             $attendance_data['created_at'] = date('Y-m-d H:i:s');
             $attendance_data['updated_at'] = date('Y-m-d H:i:s');
             $attendance_data['created_by'] = isset(auth()->user()->user_id) ? auth()->user()->user_id : null;
@@ -286,30 +297,25 @@ class GenerateReportController extends Controller
 
     public function manualAttendanceReport($fdatetime, $tdatetime, $date, $finger_id)
     {
-        // info('Manual Attendance Report function.....................');
         $attendance_data = [];
         $dataSet = [];
-
-        $results = DB::table('manual_attendance')
-            ->whereRaw("datetime >= '" . $fdatetime . "' AND datetime <= '" . $tdatetime . "'")
-            ->where('ID', $finger_id)->orderby('datetime', 'ASC')
-            ->get();
-
-        $working_time = $this->workingtime($results[0]->datetime, $results[1]->datetime);
+        $working_time = $this->workingtime($fdatetime, $tdatetime);
         $hour = explode(':', $working_time);
 
         $rawData = [
             'date' => date('Y-m-d', strtotime($date)),
             'finger_print_id' => $finger_id,
-            'in_time' => date('Y-m-d H:i:s', strtotime($results[0]->datetime)),
-            'out_time' => date('Y-m-d H:i:s', strtotime($results[1]->datetime)),
+            'in_time' => date('Y-m-d H:i:s', strtotime($fdatetime)),
+            'out_time' => date('Y-m-d H:i:s', strtotime($tdatetime)),
             'shift_name' => null,
+            'work_shift_id' => null,
             'working_time' => $working_time,
             'working_hour' => null,
-            'device_name' => $results[0]->device_name,
-            'over_time' => $this->over_time($working_time, '08:00:00'),
-            'attendance_status' => $hour[0] >= 8 ? AttendanceStatus::$PRESENT : AttendanceStatus::$LESSHOURS,
-            'in_out_time' => date('d/m/y H:i', strtotime($results[0]->datetime)) . ":" . ('IN,') . ' ' . date('d/m/y H:i', strtotime($results[1]->datetime)) . ":" . ('OUT'),
+            'device_name' => 'Manual',
+            'over_time' => $this->over_time($working_time, PayrollConstant::$NA_OVERTIME_HOUR),
+            'attendance_status' => $hour[0] >= PayrollConstant::$NA_WORKING_HOUR ? AttendanceStatus::$PRESENT : AttendanceStatus::$LESSHOURS,
+            'mandays' => MandayStatus::$INVALID,
+            'in_out_time' => date('d/m/y H:i', strtotime($fdatetime)) . ":" . ('IN,') . ' ' . date('d/m/y H:i', strtotime($tdatetime)) . ":" . ('OUT'),
         ];
 
         $attendance_data = $this->reportDataFormat($rawData);
@@ -366,6 +372,7 @@ class GenerateReportController extends Controller
                 'in_time' => date('Y-m-d H:i:s', strtotime($inTime)),
                 'out_time' => date('Y-m-d H:i:s', strtotime($outTime)),
                 'shift_name' => shiftList()[$shift->$day],
+                'work_shift_id' => $shift->$day,
                 'working_time' => $working_time,
                 'working_hour' => null,
                 'device_name' => null,
@@ -386,6 +393,7 @@ class GenerateReportController extends Controller
                 'in_time' => date('Y-m-d H:i:s', strtotime($inTime)),
                 'out_time' => null,
                 'shift_name' => shiftList()[$shift->$day],
+                'work_shift_id' => $shift->$day,
                 'working_time' => null,
                 'working_hour' => null,
                 'device_name' => null,
@@ -404,6 +412,7 @@ class GenerateReportController extends Controller
                 'in_time' => null,
                 'out_time' => null,
                 'shift_name' => shiftList()[$shift->$day],
+                'work_shift_id' => $shift->$day,
                 'working_time' => null,
                 'working_hour' => null,
                 'device_name' => null,
@@ -421,7 +430,6 @@ class GenerateReportController extends Controller
 
     public function reportDataFormat($data)
     {
-        // info('Report Data Format function...............!');
         $attendance_data = [];
         $dataSet = [];
 
@@ -430,22 +438,21 @@ class GenerateReportController extends Controller
         $attendance_data['in_time'] = $data['in_time'];
         $attendance_data['out_time'] = $data['out_time'];
         $attendance_data['shift_name'] = $data['shift_name'];
+        $attendance_data['work_shift_id'] = $data['work_shift_id'];
         $attendance_data['working_time'] = $data['working_time'];
         $attendance_data['working_hour'] = $data['working_hour'];
         $attendance_data['device_name'] = $data['device_name'];
         $attendance_data['over_time'] = $data['over_time'];
         $attendance_data['in_out_time'] = $data['in_out_time'];
         $attendance_data['attendance_status'] = $data['attendance_status'];
+        $attendance_data['early_by'] = isset($data['early_by']) ? $data['early_by'] : null;
+        $attendance_data['late_by'] = isset($data['late_by']) ? $data['late_by'] : null;
+        $attendance_data['mandays'] = isset($data['mandays']) ? $data['mandays'] : null;
         $attendance_data['status'] = GeneralStatus::$OKEY;
         $attendance_data['created_at'] = date('Y-m-d H:i:s');
         $attendance_data['updated_at'] = date('Y-m-d H:i:s');
         $attendance_data['created_by'] = isset(auth()->user()->user_id) ? auth()->user()->user_id : null;
         $attendance_data['updated_by'] = isset(auth()->user()->user_id) ? auth()->user()->user_id : null;
-
-        if (isset($data['early_by'])) {
-            $attendance_data['early_by'] = $data['early_by'];
-            $attendance_data['late_by'] = $data['late_by'];
-        }
 
         $dataSet = $attendance_data;
 
@@ -461,9 +468,9 @@ class GenerateReportController extends Controller
         if ($data_format != [] && isset($data_format['working_time']) && $data_format['working_time'] != null) {
 
             // find employee early or late time and shift name
-            if (isset($data_format['shift_name']) && $data_format['shift_name'] != null) {
+            if (isset($data_format['work_shift_id']) && $data_format['work_shift_id'] != null) {
 
-                $shift_list = WorkShift::where('shift_name', $data_format['shift_name'])->first();
+                $shift_list = WorkShift::where('work_shift_id', $data_format['work_shift_id'])->first();
 
                 $login_time = date('H:i:s', \strtotime($data_format['in_time']));
                 $in_datetime = new DateTime($data_format['in_time']);
@@ -478,14 +485,20 @@ class GenerateReportController extends Controller
                     if ($in_datetime >= $start_datetime) {
 
                         $interval = $in_datetime->diff($start_datetime);
+                        $tempArray['work_shift_id'] = $shift_list->work_shift_id;
                         $tempArray['shift_name'] = $shift_list->shift_name;
+                        $tempArray['start_time'] = $shift_list->start_time;
+                        $tempArray['end_time'] = $shift_list->end_time;
                         $tempArray['early_by'] = null;
                         $tempArray['late_by'] = $interval->format('%H') . ":" . $interval->format('%I');
 
                     } elseif ($in_datetime <= $start_datetime) {
 
                         $interval = $start_datetime->diff($in_datetime);
+                        $tempArray['work_shift_id'] = $shift_list->work_shift_id;
                         $tempArray['shift_name'] = $shift_list->shift_name;
+                        $tempArray['start_time'] = $shift_list->start_time;
+                        $tempArray['end_time'] = $shift_list->end_time;
                         $tempArray['early_by'] = $interval->format('%H') . ":" . $interval->format('%I');
                         $tempArray['late_by'] = null;
 
@@ -514,6 +527,7 @@ class GenerateReportController extends Controller
 
                                 $interval = $in_time->diff($start_time);
                                 $tempArray['finger_print_id'] = $data_format['finger_print_id'];
+                                $tempArray['work_shift_id'] = $value->work_shift_id;
                                 $tempArray['shift_name'] = $value->shift_name;
                                 $tempArray['start_time'] = $value->start_time;
                                 $tempArray['end_time'] = $value->end_time;
@@ -523,6 +537,7 @@ class GenerateReportController extends Controller
                             } elseif ($in_time <= $start_time) {
                                 $interval = $start_time->diff($in_time);
                                 $tempArray['finger_print_id'] = $data_format['finger_print_id'];
+                                $tempArray['work_shift_id'] = $value->work_shift_id;
                                 $tempArray['shift_name'] = $value->shift_name;
                                 $tempArray['start_time'] = $value->start_time;
                                 $tempArray['end_time'] = $value->end_time;
@@ -534,6 +549,7 @@ class GenerateReportController extends Controller
 
                         } else {
                             $tempArray['finger_print_id'] = $data_format['finger_print_id'];
+                            $tempArray['work_shift_id'] = null;
                             $tempArray['shift_name'] = null;
                             $tempArray['start_time'] = null;
                             $tempArray['end_time'] = null;
@@ -548,26 +564,37 @@ class GenerateReportController extends Controller
             }
 
             // find employee over time
-            if ($tempArray['shift_name'] != null) {
+            if (isset($tempArray['work_shift_id']) && $tempArray['work_shift_id'] != null) {
 
-                $workingTime = new DateTime($data_format['working_time']);
-                $shiftDuration = new DateTime(PayrollConstant::$FULL_DAY);
+                $shiftStartTime = new DateTime(date('H:i:s', strtotime($tempArray['start_time'])));
+                $shiftEndTime = new DateTime(date('H:i:s', strtotime($tempArray['end_time'])));
+                $halfDayTime = new DateTime(PayrollConstant::$HALF_DAY);
+                $shiftEndTimeForAtt = new DateTime(date('H:i:s', strtotime('-5 minutes', strtotime($tempArray['end_time']))));
 
-                if ($workingTime >= $shiftDuration) {
-                    $tempArray['attendance_status'] = AttendanceStatus::$PRESENT;
+                if ($shiftStartTime < $shiftEndTime) {
+                    $employeeOutTime = new DateTime(date('H:i:s', strtotime($data_format['out_time'])));
                 } else {
-                    $tempArray['attendance_status'] = AttendanceStatus::$LESSHOURS;
+                    $endDate = date('Y-m-d H:i:s', strtotime('+1 days', strtotime($data_format['date'] . ' ' . $tempArray['end_time'])));
+                    $shiftEndTime = new DateTime(date('Y-m-d H:i:s', strtotime($endDate)));
+                    $employeeOutTime = new DateTime($data_format['out_time']);
                 }
 
-                $outTime = new DateTime(date('H:i:s', strtotime($data_format['out_time'])));
-                $shiftEndTime = new DateTime(date('H:i:s', strtotime($tempArray['end_time'])));
-                $employeeOutTime = new DateTime($data_format['out_time']);
+                if ($employeeOutTime >= $shiftEndTimeForAtt) {
+                    $tempArray['attendance_status'] = AttendanceStatus::$PRESENT;
+                    $tempArray['mandays'] = MandayStatus::$FULL_DAY;
+                } else if ($employeeOutTime >= $halfDayTime) {
+                    $tempArray['attendance_status'] = AttendanceStatus::$LESSHOURS;
+                    $tempArray['mandays'] = MandayStatus::$HALF_DAY;
+                } else {
+                    $tempArray['attendance_status'] = AttendanceStatus::$LESSHOURS;
+                    $tempArray['mandays'] = MandayStatus::$LOSS_OF_PAY;
+                }
 
-                if ($shiftEndTime < $employeeOutTime && $outTime > $shiftEndTime) {
+                if ($shiftEndTime < $employeeOutTime) {
 
-                    $over_time = $employeeOutTime->diff($shiftEndTime);
+                    $over_time = $shiftEndTime->diff($employeeOutTime);
 
-                    $roundMinutes = (int) $over_time->i >= 30 ? '30' : '00';
+                    $roundMinutes = (int) $over_time->i >= 30 ? 30 : '00';
                     $roundHours = (int) $over_time->h >= 1 ? sprintf("%02d", ($over_time->h)) : '00';
 
                     if ($over_time->h >= 1) {
@@ -577,23 +604,27 @@ class GenerateReportController extends Controller
                 } else {
                     $tempArray['over_time'] = null;
                 }
-            }
 
-            if ($tempArray['shift_name'] == null) {
+            } else if (!isset($tempArray['work_shift_id']) || $tempArray['work_shift_id'] == null) {
 
                 $workingTime = new DateTime($data_format['working_time']);
-                $actualTime = new DateTime(PayrollConstant::$ACTUAL_WORKING_HOUR);
-                $shiftDuration = new DateTime(PayrollConstant::$FULL_DAY);
+                $naShiftDuration = new DateTime(PayrollConstant::$NA_OVERTIME_HOUR);
+                $halfDayTime = new DateTime(PayrollConstant::$HALF_DAY);
 
-                if ($workingTime >= $shiftDuration) {
+                if ($workingTime >= $naShiftDuration) {
                     $tempArray['attendance_status'] = AttendanceStatus::$PRESENT;
+                    $tempArray['mandays'] = MandayStatus::$FULL_DAY;
+                } else if ($workingTime >= $halfDayTime) {
+                    $tempArray['attendance_status'] = AttendanceStatus::$LESSHOURS;
+                    $tempArray['mandays'] = MandayStatus::$HALF_DAY;
                 } else {
                     $tempArray['attendance_status'] = AttendanceStatus::$LESSHOURS;
+                    $tempArray['mandays'] = MandayStatus::$LOSS_OF_PAY;
                 }
 
-                if ($workingTime > $actualTime) {
+                if ($workingTime > $naShiftDuration) {
 
-                    $over_time = $actualTime->diff($workingTime);
+                    $over_time = $naShiftDuration->diff($workingTime);
 
                     $roundMinutes = (int) $over_time->i >= 30 ? '30' : '00';
                     $roundHours = (int) $over_time->h >= 1 ? sprintf("%02d", ($over_time->h)) : '00';
@@ -610,6 +641,7 @@ class GenerateReportController extends Controller
             }
 
             $dataSet = array_merge($data_format, $tempArray);
+            unset($dataSet['start_time']);unset($dataSet['end_time']);
 
             return $dataSet;
         }
@@ -722,5 +754,48 @@ class GenerateReportController extends Controller
     public function calculateAttendance()
     {
         return view('admin.attendance.calculateAttendance.index');
+    }
+
+    public function ifCompanyHoliday($compHolidays, $date)
+    {
+
+        $comp_holidays = [];
+        foreach ($compHolidays as $holidays) {
+            $start_date = $holidays->fdate;
+            $end_date = $holidays->tdate;
+            while (strtotime($start_date) <= strtotime($end_date)) {
+                $comp_holidays[] = $start_date;
+                $start_date = date("Y-m-d", strtotime("+1 day", strtotime($start_date)));
+            }
+        }
+
+        foreach ($comp_holidays as $val) {
+            if ($val == $date) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function ifHoliday($govtHolidays, $date)
+    {
+        $ph = [];
+
+        foreach ($govtHolidays as $holidays) {
+            $start_date = $holidays->from_date;
+            $end_date = $holidays->to_date;
+            while (strtotime($start_date) <= strtotime($end_date)) {
+                $ph[] = $start_date;
+                $start_date = date("Y-m-d", strtotime("+1 day", strtotime($start_date)));
+            }
+        }
+
+        foreach ($ph as $val) {
+            if ($val == $date) {
+                return true;
+            }
+        }
+        return false;
     }
 }

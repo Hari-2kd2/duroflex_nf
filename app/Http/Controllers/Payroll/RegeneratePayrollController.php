@@ -36,9 +36,9 @@ class RegeneratePayrollController extends Controller
     {
         \set_time_limit(0);
 
-        $fdate = dateConvertFormtoDB($request->fdate);
-        $tdate = dateConvertFormtoDB($request->tdate);
-        $month = monthConvertFormtoDB($request->month);
+        $fdate = $request->fdate;
+        $tdate = $request->tdate;
+        $month = $request->month;
         $branch_id = $request->branch_id;
         $department_id = $request->department_id;
         $preview = $request->preview;
@@ -49,8 +49,8 @@ class RegeneratePayrollController extends Controller
         $employeeList = Employee::where('status', UserStatus::$ACTIVE)->whereNotIn('branch_id', ['', null, '0'])->select('employee_id', 'finger_id', 'first_name', 'last_name')->get();
         $payrollSetting = PayRollSetting::first();
         $canteenSetting = FoodAllowanceDeductionRule::first();
-        $monthlyWorkingDays = MonthlyWorkingDay::where('year', date('Y', strtotime($month)))->first();
-        $holidayDetails = DB::select(DB::raw('call SP_getHoliday("' . $fdate . '","' . $tdate . '")'));
+        $monthlyWorkingDays = MonthlyWorkingDay::where('year', date('Y', strtotime(monthConvertFormtoDB($request->month))))->first();
+        $holidayDetails = DB::select(DB::raw('call SP_getHoliday("' . dateConvertFormtoDB($request->fdate) . '","' . dateConvertFormtoDB($request->tdate) . '")'));
 
         if ($preview != true) {
 
@@ -68,15 +68,16 @@ class RegeneratePayrollController extends Controller
 
             }
 
-            $employeePayroll = PayRoll::whereRaw('month= ' . date('m', strtotime($month)) . ' and year= ' . date('Y', strtotime($month)) . $qry_payroll . '')->pluck('employee')->toArray();
+            $employeePayroll = PayRoll::whereRaw('month= ' . date('m', strtotime(monthConvertFormtoDB($request->month))) . ' and year= ' . date('Y', strtotime(monthConvertFormtoDB($request->month))) . $qry_payroll . '')->pluck('employee')->toArray();
             $dataSetCount = Employee::whereNotIn('employee_id', $employeePayroll)->whereRaw($qry)->count();
         }
 
         $wageSheet = [];
 
         if ($_POST && $preview == true) {
-            $wageSheet = $this->verifyWageSheet($branch_id, $fdate, $tdate, $month, $payrollSetting, $canteenSetting, $monthlyWorkingDays, $holidayDetails, $department_id);
+            $wageSheet = $this->verifyWageSheet($branch_id, dateConvertFormtoDB($request->fdate), dateConvertFormtoDB($request->tdate), monthConvertFormtoDB($request->month), $payrollSetting, $canteenSetting, $monthlyWorkingDays, $holidayDetails, $department_id);
         }
+
         return \view('admin.payroll.regeneratePayroll.index', compact('branchList', 'dataSetCount', 'department_id', 'departmentList', 'wageSheet', 'month', 'preview', 'branch_id', 'tdate', 'fdate', 'employeeList', 'payrollSetting'));
     }
 

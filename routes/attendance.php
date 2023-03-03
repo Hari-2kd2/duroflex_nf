@@ -73,19 +73,20 @@ Route::group(['middleware' => ['preventbackbutton', 'auth']], function () {
     Route::post('attendanceMusterReport', ['as' => 'attendanceMusterReport.attendanceMusterReport', 'uses' => 'Attendance\AttendanceReportController@attendanceMusterReport']);
 
     Route::get('manualAttendance', ['as' => 'manualAttendance.manualAttendance', 'uses' => 'Attendance\ManualAttendanceController@manualAttendance']);
-    Route::get('manualAttendance/filter', ['as' => 'manualAttendance.filter', 'uses' => 'Attendance\ManualAttendanceController@filterData']);
+    Route::post('manualAttendance/filter', ['as' => 'manualAttendance.filter', 'uses' => 'Attendance\ManualAttendanceController@manualAttendance']);
+    // Route::get('manualAttendance/filter', ['as' => 'manualAttendance.filter', 'uses' => 'Attendance\ManualAttendanceController@filterData']);
     Route::post('manualAttendanceStore', ['as' => 'manualAttendance.store', 'uses' => 'Attendance\ManualAttendanceController@store']);
+
+    Route::post('manualAttendance', ['as' => 'manualAttendance.individualReport', 'uses' => 'Attendance\ManualAttendanceController@individualReport']);
 
     Route::get('downloadDailyAttendance', 'Attendance\AttendanceReportController@downloadDailyAttendance');
     Route::get('downloadMonthlyAttendance', 'Attendance\AttendanceReportController@downloadMonthlyAttendance');
     Route::get('downloadMyAttendance', 'Attendance\AttendanceReportController@downloadMyAttendance');
     Route::get('downloadAttendanceSummaryReport/{date}', 'Attendance\AttendanceReportController@downloadAttendanceSummaryReport');
 
-
     Route::get('generateReport', ['as' => 'generateReport', 'uses' => 'Attendance\GenerateReportController@regenerateAttendanceReport']);
 
     Route::get('calculateAttendance', ['as' => 'calculateAttendance.calculateAttendance', 'uses' => 'Attendance\GenerateReportController@calculateAttendance']);
-
 
     // get attendance by ip
 

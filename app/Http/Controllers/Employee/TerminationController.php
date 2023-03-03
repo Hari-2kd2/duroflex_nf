@@ -28,21 +28,8 @@ class TerminationController extends Controller
 
     public function index(Request $request)
     {
-        // $qry = "1 ";
 
-        // if ($request->terminate_by) {
-        //     $qry .= " AND terminate_by=" . $request->terminate_by;
-        // }
-
-        // if ($request->termination_date) {
-        //     $qry .= " AND  termination_date=" . dateConvertFormtoDB($request->termination_date);
-        // }
-
-        // $results = Termination::whereRaw("(" . $qry . ")")->with(['terminateTo', 'terminateBy'])->orderBy('termination_id', 'DESC')->get();
-        // $admin = User::whereIn('role_id', [1, 2])->pluck('user_id');
-        // $employeeList = Employee::whereIn('user_id', $admin)->status(UserStatus::$ACTIVE)->select('employee_id', 'first_name', 'last_name')->get();
-
-        $results = Termination::with(['terminateTo', 'terminateBy'])->orderBy('termination_id', 'DESC')->get();
+        $results = Termination::with(['terminateTo', 'terminateBy'])->without('branch', 'department', 'designation', 'costcenter', 'subdepartment')->orderBy('termination_id', 'DESC')->get();
 
         return view('admin.employee.termination.index', ['results' => $results, 'terminate_by' => $request->terminate_by, 'termination_date' => $request->termination_date, 'notice_date' => $request->notice_date]);
     }
